@@ -46,6 +46,12 @@ device('avm-fritz-repeater-1200', 'avm_fritzrepeater-1200', {
 	factory = false,
 })
 
+-- Cisco Meraki
+
+device('cisco-meraki-mr33', 'meraki_mr33',{
+	factory = false,
+	broken = true, -- not flashable without opening the case
+})
 
 -- EnGenius
 
