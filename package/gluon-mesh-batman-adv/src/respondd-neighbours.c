@@ -45,7 +45,6 @@ struct neigh_netlink_opts {
 	struct batadv_nlquery_opts query_opts;
 };
 
-
 static struct json_object * ifnames2addrs(struct json_object *interfaces) {
 	struct json_object *ret = json_object_new_object();
 
@@ -67,12 +66,14 @@ static struct json_object * ifnames2addrs(struct json_object *interfaces) {
 }
 
 static const enum batadv_nl_attrs parse_orig_list_mandatory[] = {
+	BATADV_ATTR_ALGO_NAME,
 	BATADV_ATTR_ORIG_ADDRESS,
 	BATADV_ATTR_NEIGH_ADDRESS,
-	BATADV_ATTR_TQ,
 	BATADV_ATTR_HARD_IFINDEX,
 	BATADV_ATTR_LAST_SEEN_MSECS,
 };
+
+static const char * BATMAN_V = "BATMAN_V";
 
 static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
 {
@@ -83,11 +84,13 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
 	uint8_t *orig;
 	uint8_t *dest;
 	uint8_t tq;
+	uint32_t tp;
 	uint32_t hardif;
 	uint32_t lastseen;
 	char ifname_buf[IF_NAMESIZE], *ifname;
 	struct neigh_netlink_opts *opts;
 	char mac1[18];
+	int isbatmanv;
 
 	opts = batadv_container_of(query_opts, struct neigh_netlink_opts,
 				   query_opts);
@@ -110,7 +113,16 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
 
 	orig = nla_data(attrs[BATADV_ATTR_ORIG_ADDRESS]);
 	dest = nla_data(attrs[BATADV_ATTR_NEIGH_ADDRESS]);
-	tq = nla_get_u8(attrs[BATADV_ATTR_TQ]);
+
+	isbatmanv = nla_strcmp(attrs[BATADV_ATTR_ALGO_NAME], BATMAN_V);
+
+	if(isbatmanv){
+	  tp = nla_get_u32(attrs[BATADV_ATTR_THROUGHPUT]);
+	  tq = gluonutil_get_pseudo_tq(tp);
+	} else{
+	  tq = nla_get_u8(attrs[BATADV_ATTR_TQ]);
+	}
+
 	hardif = nla_get_u32(attrs[BATADV_ATTR_HARD_IFINDEX]);
 	lastseen = nla_get_u32(attrs[BATADV_ATTR_LAST_SEEN_MSECS]);
 
@@ -135,6 +147,9 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
 	}
 
 	json_object_object_add(obj, "tq", json_object_new_int(tq));
+	if(tp){
+		json_object_object_add(obj, "tp", json_object_new_double(tp / 1.0));
+	}
 	json_object_object_add(obj, "lastseen", json_object_new_double(lastseen / 1000.));
 	json_object_object_add(obj, "best", json_object_new_boolean(!!attrs[BATADV_ATTR_FLAG_BEST]));
 	json_object_object_add(interface, mac1, obj);
