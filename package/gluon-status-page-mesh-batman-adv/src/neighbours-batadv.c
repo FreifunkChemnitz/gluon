@@ -3,7 +3,6 @@
 #include <unistd.h>
 #include <json-c/json.h>
 #include <net/if.h>
-
 #include <batadv-genl.h>
 
 #define STR(x) #x
@@ -15,12 +14,23 @@ struct neigh_netlink_opts {
 };
 
 static const enum batadv_nl_attrs parse_orig_list_mandatory[] = {
+  BATADV_ATTR_ALGO_NAME,
   BATADV_ATTR_ORIG_ADDRESS,
   BATADV_ATTR_NEIGH_ADDRESS,
-  BATADV_ATTR_TQ,
   BATADV_ATTR_HARD_IFINDEX,
   BATADV_ATTR_LAST_SEEN_MSECS,
 };
+
+static const char * BATMAN_V = "BATMAN_V";
+
+static uint8_t get_pseudo_tq(uint32_t tp) {
+	return tp >= 54000 ? 255 :
+		tp < 417 ? 0 :
+		(uint8_t)((1.42459274279287898080 *
+			  log2(tp) -
+			  12.39555493934044793479) *
+			 25.5);
+}
 
 static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
 {
@@ -31,7 +41,10 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
   uint8_t *orig;
   uint8_t *dest;
   uint8_t tq;
+  uint32_t tp = 0;
   uint32_t hardif;
+  int isbatmanv;
+
   char ifname_buf[IF_NAMESIZE], *ifname;
   struct neigh_netlink_opts *opts;
   char mac1[18];
@@ -56,7 +69,16 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
 
   orig = nla_data(attrs[BATADV_ATTR_ORIG_ADDRESS]);
   dest = nla_data(attrs[BATADV_ATTR_NEIGH_ADDRESS]);
-  tq = nla_get_u8(attrs[BATADV_ATTR_TQ]);
+
+  isbatmanv = nla_strcmp(attrs[BATADV_ATTR_ALGO_NAME], BATMAN_V);
+
+  if(isbatmanv){
+	  tp = nla_get_u32(attrs[BATADV_ATTR_THROUGHPUT]);
+	  tq = get_pseudo_tq(tp);
+  } else{
+	  tq = nla_get_u8(attrs[BATADV_ATTR_TQ]);
+  }
+
   hardif = nla_get_u32(attrs[BATADV_ATTR_HARD_IFINDEX]);
 
   if (memcmp(orig, dest, 6) != 0)
@@ -74,8 +96,13 @@ static int parse_orig_list_netlink_cb(struct nl_msg *msg, void *arg)
     return NL_OK;
 
   json_object_object_add(neigh, "tq", json_object_new_int(tq * 100 / 255));
+  if(tp > 0){
+	  json_object_object_add(neigh, "tp", json_object_new_double(tp / 1.0));
+  }
   json_object_object_add(neigh, "ifname", json_object_new_string(ifname));
-  json_object_object_add(neigh, "best", json_object_new_boolean(attrs[BATADV_ATTR_FLAG_BEST]));
+
+  int best = nla_get_flag(attrs[BATADV_ATTR_FLAG_BEST]);
+  json_object_object_add(neigh, "best", json_object_new_boolean(!!best));
 
   json_object_object_add(opts->obj, mac1, neigh);
 
