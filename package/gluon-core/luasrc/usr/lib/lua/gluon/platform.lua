@@ -41,7 +41,7 @@ function M.is_outdoor_device()
 		'tplink,wbs210-v1',
 		'tplink,wbs210-v2',
 		'tplink,wbs510-v1',
-		'ubnt,uk-ultra',
+		'ubnt,lap-120',
 		'ubnt,unifi-ap-outdoor-plus',
 		'ubnt,unifiac-mesh',
 		'ubnt,unifiac-mesh-pro',
