@@ -132,6 +132,7 @@ ath79-generic
   - NanoBeam M5 (XW)
   - NanoStation Loco M2/M5 (XW)
   - NanoStation M2/M5 (XW)
+  - LiteAP ac (LAP-120)
   - UniFi AC Lite
   - UniFi AC LR
   - UniFi AC Mesh
