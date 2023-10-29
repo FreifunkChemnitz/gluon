@@ -149,6 +149,7 @@ ath79-generic
 
 * Ubiquiti
 
+  - LiteAP ac (LAP-120)
   - UniFi AC Lite
   - UniFi AC LR
   - UniFi AC Mesh
