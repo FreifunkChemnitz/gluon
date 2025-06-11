@@ -105,6 +105,11 @@ device('netgear-wndr3700-v5', 'netgear_wndr3700-v5', {
 	broken = true, -- untested
 })
 
+-- SamKnows
+
+device('samknows-whitebox-v8', 'samknows_whitebox-v8', {
+	broken = true, -- has to be openened to install OpenWrt
+})
 
 -- TP-Link
 
